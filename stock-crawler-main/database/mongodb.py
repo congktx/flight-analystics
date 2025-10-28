@@ -1,7 +1,7 @@
 import sys
 import logging
 
-from pymongo import MongoClient
+from pymongo import MongoClient, DESCENDING
 from dotenv import load_dotenv
 from config import MongoDBConfig
 from utils.time_utils import round_timestamp
@@ -39,7 +39,7 @@ class MongoDB:
             upsert=True
         )
         return result.upserted_id
-    
+
     def upsert_space_market(self, market_infos):
         result = self._market_status.update_one(
             {"_id": market_infos["_id"]},
@@ -47,3 +47,40 @@ class MongoDB:
             upsert=True
         )
         return result.upserted_id
+    
+    def upsert_space_ohlc(self, ohlc_infos):
+        result = self._OHLC.update_one(
+            {"_id": ohlc_infos["_id"]},
+            {"$setOnInsert": ohlc_infos},
+            upsert=True  
+        )
+
+        return result.upserted_id
+
+    def upsert_space_news(self, news_infos):
+        result = self._news_sentiment.update_one(
+            {"_id": news_infos["_id"]},
+            {"$setOnInsert": news_infos},
+            upsert=True
+        )
+
+        return result.upserted_id
+
+    def upsert_last_completed_timestamp(self, collection, timestamp):
+        result = collection.update_one(
+            {"_id": "last_completed_timestamp"},
+            {"$setOnInsert": {"timestamp": timestamp}},
+            upsert=True
+        )
+        return result.upserted_id
+
+    def find_last_timestamp(self, collection):
+        result = collection.find_one({
+            "_id": 'last_completed_timestamp'
+        })
+        return result.get('timestamp')
+
+    def find_documets(self, collection, filter):
+        result = collection.find(filter).sort([("time_update", DESCENDING)])
+
+        return result

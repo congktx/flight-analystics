@@ -12,11 +12,11 @@ from utils.parse_timestamp import parse_date_to_timestamp
 
 mongodb = MongoDB()
 
-def get_company_infos(date: str = "2024-12-01"):
+def get_company_infos(date: str = "2024-12-01", exchange = 'XNAS'):
     params = {
         "apiKey": PolygonConfig.API_KEY,
         "market": "stocks",
-        "exchange": "XNAS",
+        "exchange": exchange,
         "active": "true",
         "order": "asc",
         "limit": "100",
@@ -92,15 +92,20 @@ def load_all_company_infos_to_db(list_company_infos, time_update):
         mongodb.upsert_space_company(document)
         time.sleep(0.1)
 
-def crawl_all_company(date: str = "2024-12-01"):
+def crawl_all_company(date: str = "2024-12-01", list_exchage = ['XNAS', 'XNYS']):
     time_update = parse_date_to_timestamp(date)
     
-    list_company_infos, cursor = get_company_infos(date)
-
-    load_all_company_infos_to_db(list_company_infos, time_update)
-    time.sleep(12)
-    
-    while cursor: 
-        list_company_infos, cursor = polygon_get_next_url(cursor)
+    for exchange in list_exchage:
+        list_company_infos, cursor = get_company_infos(date, exchange)
         load_all_company_infos_to_db(list_company_infos, time_update)
         time.sleep(12)
+        
+        while cursor: 
+            list_company_infos, cursor = polygon_get_next_url(cursor)
+            load_all_company_infos_to_db(list_company_infos, time_update)
+            time.sleep(12)
+    
+    mongodb.upsert_last_completed_timestamp(mongodb._company_infos, time_update)
+    
+    
+    
