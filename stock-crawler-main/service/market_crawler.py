@@ -28,8 +28,8 @@ def get_market_status(date: str = "2024-12-01"):
     try:
         response = requests.get(url, params=params, headers=headers).json()
 
-        if not response['markets']:
-            return response['errors']
+        if not response.get('markets'):
+            return response.get('errors')
 
         return response['markets']
     except Exception as e:

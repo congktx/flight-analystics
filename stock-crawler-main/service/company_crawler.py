@@ -32,11 +32,11 @@ def get_company_infos(date: str = "2024-12-01", exchange = 'XNAS'):
 
     try:
         response = requests.get(url, params=params, headers=headers).json()
-        next_url = response['next_url'] or None
+        next_url = response.get('next_url')
         if next_url:
             next_url = next_url.split('cursor=')[-1]
-        if not response['results']:
-            return response['errors']
+        if not response.get('results'):
+            return response.get('errors')
 
         return response['results'], next_url
     except Exception as e:
@@ -58,13 +58,13 @@ def polygon_get_next_url(cursor: str):
 
     try:
         response = requests.get(url, params=params, headers=headers).json()
-        next_url = response['next_url'] or None
+        next_url = response.get('next_url')
 
         if next_url:
             next_url = next_url.split('cursor=')[-1]
 
-        if not response['results']:
-            return response['errors']
+        if not response.get('results'):
+            return response.get('errors')
 
         return response['results'], next_url
     except Exception as e:

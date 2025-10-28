@@ -13,7 +13,7 @@ mongodb = MongoDB()
 def get_ohlc(ticker, from_timestamp, to_timestamp):
     from_date = timestamp_to_date(from_timestamp)
     to_date = timestamp_to_date(to_timestamp)
-    url = f'https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/hour/${from_date}/${to_date}'
+    url = f'https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/hour/{from_date}/{to_date}'
     
     headers = {
         "Content-Type": "application/json"
@@ -28,11 +28,11 @@ def get_ohlc(ticker, from_timestamp, to_timestamp):
     
     try:
         response = requests.get(url, params=params, headers=headers).json()
+
+        next_url = response.get('next_url')
         
-        next_url = response['next_url'] or None
-        
-        if not response['results']:
-            return response['errors']
+        if not response.get('results'):
+            return response.get('errors')
 
         return response['results'], next_url
     except Exception as e:
@@ -46,21 +46,22 @@ def ohlc_get_next_url(url):
 
     try:
         response = requests.get(url, headers=headers).json()
-        next_url = response['next_url'] or None
-
-        if not response['results']:
-            return response['errors']
+        
+        next_url = response.get('next_url')
+        
+        if not response.get('results'):
+            return response.get('errors')
 
         return response['results'], next_url
     except Exception as e:
         print(f"Error fetching data: {e}")
         return [], None
 
-def load_all_ohlc_to_db(list_ohlc, time_update):
+def load_all_ohlc_to_db(ticker, list_ohlc, time_update):
     for ohlc in list_ohlc:
         document = {
-            "_id": ohlc.get('ticker') + '_' + ohlc.get('t'),
-            "ticker": ohlc.get('ticker'),
+            "_id": ticker + '_' + str(ohlc.get('t')),
+            "ticker": ticker,
             "t": ohlc.get('t'),
             "o": ohlc.get('o'),
             "h": ohlc.get('h'),
@@ -73,4 +74,24 @@ def load_all_ohlc_to_db(list_ohlc, time_update):
         mongodb.upsert_space_ohlc(document)
         time.sleep(0.1)
         
-def crawl_all_
+def crawl_all_ohlc(from_timestamp, to_timestamp, time_update):
+    timestamp = mongodb.find_last_timestamp(mongodb._company_infos)
+    filter = {
+        "time_update": timestamp
+    }
+    
+    list_company_infos = list(mongodb.find_documets(mongodb._company_infos, filter))
+    tickers = list(map(lambda x: x.get('ticker'), list_company_infos))
+    
+    for ticker in tickers:
+        list_ohlc, next_url = get_ohlc(ticker, from_timestamp, to_timestamp)
+        load_all_ohlc_to_db(ticker, list_ohlc, time_update)
+        
+        time.sleep(12)
+        
+        while next_url:
+            list_ohlc, next_url = ohlc_get_next_url(next_url)
+            load_all_ohlc_to_db(ticker, list_ohlc, time_update)
+            time.sleep(12)
+    
+    
