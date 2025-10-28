@@ -19,6 +19,8 @@ logs/
 tmp/
 temp/
 
+__pycache__
+
 test.*
 
 secret.json
