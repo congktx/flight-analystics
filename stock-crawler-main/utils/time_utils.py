@@ -12,3 +12,7 @@ def timestamp_to_date(timestamp):
 def timestamp_to_YYYYMMDDTHHMM(timestamp):
     dt = datetime.fromtimestamp(timestamp, tz=timezone.utc)
     return dt.strftime("%Y%m%dT%H%M")
+
+def timestamp_to_YYYYMMDDTHH(timestamp):
+    dt = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+    return dt.strftime("%Y%m%dT%H")

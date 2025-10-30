@@ -13,6 +13,9 @@ class PolygonConfig:
 
 class AlphavantageConfig:
     API_KEY = os.environ.get('ALPHAVANTAGE_API_KEY') or "abc"
+    
+class AssignedCompaniesConfig:
+    ASSIGNED_COMPANIES = os.environ.get('ASSIGNED_COMPANIES') or "abc"
 
 if __name__ == "__main__":
     print(MongoDBConfig.CONNECTION_URL)

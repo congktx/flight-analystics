@@ -81,7 +81,7 @@ def crawl_news_sentiment(from_timestamp, to_timestamp, time_update):
     filter = {
         "time_update": timestamp
     }
-    list_company_infos = list(mongodb.find_documets(mongodb._company_infos, filter))
+    list_company_infos = list(mongodb.find_documents(mongodb._company_infos, filter))
     tickers = list(map(lambda x: x.get('ticker'), list_company_infos))
 
     for ticker in tickers:

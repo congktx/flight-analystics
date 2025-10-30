@@ -80,7 +80,7 @@ class MongoDB:
         })
         return result.get('timestamp')
 
-    def find_documets(self, collection, filter):
+    def find_documents(self, collection, filter):
         result = collection.find(filter).sort([("time_update", DESCENDING)])
 
         return result
