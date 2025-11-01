@@ -58,6 +58,7 @@ def ohlc_get_next_url(url):
         return [], None
 
 def load_all_ohlc_to_db(ticker, list_ohlc, time_update):
+    list_documents = []
     for ohlc in list_ohlc:
         document = {
             "_id": ticker + '_' + str(ohlc.get('t')),
@@ -70,9 +71,11 @@ def load_all_ohlc_to_db(ticker, list_ohlc, time_update):
             'v': ohlc.get('v'),
             "time_update": time_update
         }
+
+        list_documents.append(document)
     
-        mongodb.upsert_space_ohlc(document)
-        time.sleep(0.1)
+    mongodb.upsert_space_many_ohlc(list_documents)
+    time.sleep(0.1)
         
 def crawl_all_ohlc(from_timestamp, to_timestamp, time_update):
     timestamp = mongodb.find_last_timestamp(mongodb._company_infos)
