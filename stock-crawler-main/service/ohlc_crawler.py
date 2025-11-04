@@ -32,7 +32,7 @@ def get_ohlc(ticker, from_timestamp, to_timestamp):
         next_url = response.get('next_url')
         
         if not response.get('results'):
-            return response.get('errors')
+            return response.get('errors'), None
 
         return response['results'], next_url
     except Exception as e:
@@ -50,7 +50,7 @@ def ohlc_get_next_url(url):
         next_url = response.get('next_url')
         
         if not response.get('results'):
-            return response.get('errors')
+            return response.get('errors'), None
 
         return response['results'], next_url
     except Exception as e:
@@ -85,8 +85,17 @@ def crawl_all_ohlc(from_timestamp, to_timestamp, time_update):
     
     list_company_infos = list(mongodb.find_documets(mongodb._company_infos, filter))
     tickers = list(map(lambda x: x.get('ticker'), list_company_infos))
+
+    last_ticker = mongodb.find_last_timestamp(mongodb._OHLC)
+    is_start_crawl = False
     
     for ticker in tickers:
+        if last_ticker == 'None' or last_ticker == ticker: is_start_crawl = True
+        
+        if not is_start_crawl: continue
+
+        mongodb.upsert_last_completed_timestamp(mongodb._OHLC, ticker)
+        
         list_ohlc, next_url = get_ohlc(ticker, from_timestamp, to_timestamp)
         load_all_ohlc_to_db(ticker, list_ohlc, time_update)
         
@@ -94,7 +103,7 @@ def crawl_all_ohlc(from_timestamp, to_timestamp, time_update):
         
         while next_url:
             list_ohlc, next_url = ohlc_get_next_url(next_url)
-            load_all_ohlc_to_db(ticker, list_ohlc, time_update)
+            if isinstance(list_ohlc, list):
+                load_all_ohlc_to_db(ticker, list_ohlc, time_update)
             time.sleep(12)
-    
     

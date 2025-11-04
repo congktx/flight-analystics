@@ -79,6 +79,8 @@ class MongoDB:
         result = collection.find_one({
             "_id": 'last_completed_timestamp'
         })
+        if not result: 
+            return "None"
         return result.get('timestamp')
 
     def find_documets(self, collection, filter):
