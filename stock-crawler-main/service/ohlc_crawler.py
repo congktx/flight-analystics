@@ -105,12 +105,15 @@ def crawl_assigned_companies_ohlc(from_timestamp, to_timestamp, time_update):
         with open(dov_path, "r", encoding="utf-8") as f:
             data = json.load(f)
             tickers = data.get(AssignedCompaniesConfig.ASSIGNED_COMPANIES, [])
+            last_index = data.get("ticker_index_finished", {}).get("Long", {}).get("ohlc", -1)
             print("tickers counted:", len(tickers))
     except Exception as e:
         print(f"Error loading division_of_labor.json: {e}")
+        return
         tickers = []
     
-    for ticker in tickers:
+    for index in range(last_index + 1, len(tickers)):
+        ticker = tickers[index]
         earliest_ohlc = get_earliest_ohlc(ticker)
         if earliest_ohlc:
             easrliest_timestamp = earliest_ohlc.get('t') / 1000 + 3600  # plus one hour
@@ -124,6 +127,16 @@ def crawl_assigned_companies_ohlc(from_timestamp, to_timestamp, time_update):
         else:
             print(f"Start crawling OHLC for ticker{ticker} from {timestamp_to_YYYYMMDDTHH(from_timestamp)}")
             load_ohlc_to_db(ticker, from_timestamp, to_timestamp, time_update)
+        print(f"Completed crawling OHLC data for ticker {ticker}.")
+        try:
+            with open(dov_path, "r+", encoding="utf-8") as f:
+                data = json.load(f)
+                data["ticker_index_finished"]["Long"] = index - 1  # Save last index
+                f.seek(0)
+                json.dump(data, f, indent=4)
+                f.truncate()
+        except Exception as e:
+            print(f"Error updating progress in division_of_labor.json: {e}")
     print("Completed crawling assigned companies' OHLC data.")
     return
             
