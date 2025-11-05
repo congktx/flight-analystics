@@ -9,4 +9,4 @@ if __name__ == '__main__':
 
     # crawl_all_ohlc(1704067200, 1759190400, 1759190400)
     
-    crawl_assigned_companies_ohlc(1733011200, 1759190400, 1759190400)
+    crawl_assigned_companies_ohlc(1704067200, 1759190400, 1759190400)

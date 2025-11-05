@@ -2,7 +2,7 @@ import time
 import os
 import json
 import requests
-from pymongo import MongoClient, DESCENDING
+from pymongo import MongoClient, DESCENDING, ASCENDING
 
 from database.mongodb import MongoDB
 
@@ -52,7 +52,7 @@ def ohlc_get_next_url(url):
         next_url = response.get('next_url')
         
         if not response.get('results'):
-            return response.get('errors')
+            return response.get('errors'), None
 
         return response['results'], next_url
     except Exception as e:
@@ -111,25 +111,19 @@ def crawl_assigned_companies_ohlc(from_timestamp, to_timestamp, time_update):
         tickers = []
     
     for ticker in tickers:
+        earliest_ohlc = get_earliest_ohlc(ticker)
+        if earliest_ohlc:
+            easrliest_timestamp = earliest_ohlc.get('t') / 1000 + 3600  # plus one hour
+            print(f"Start crawling OHLC for ticker {ticker} from {timestamp_to_YYYYMMDDTHH(from_timestamp)}")
+            load_ohlc_to_db(ticker, from_timestamp, easrliest_timestamp, time_update)
         latest_ohlc = get_latest_ohlc(ticker)
         if latest_ohlc:
-            from_timestamp = latest_ohlc.get('t') / 1000 + 3600  # plus one hour
-            print(f"Continue crawling OHLC for ticker {ticker} from {timestamp_to_YYYYMMDDTHH(from_timestamp)}")
+            latest_timestamp = latest_ohlc.get('t') / 1000 + 3600  # plus one hour
+            print(f"Continue crawling OHLC for ticker {ticker} from {timestamp_to_YYYYMMDDTHH(latest_timestamp)}")
+            load_ohlc_to_db(ticker, latest_timestamp, to_timestamp, time_update)
         else:
             print(f"Start crawling OHLC for ticker{ticker} from {timestamp_to_YYYYMMDDTHH(from_timestamp)}")
-        list_ohlc, next_url = get_ohlc(ticker, from_timestamp, to_timestamp)
-        if not list_ohlc:
-            print(f"No new OHLC data for ticker {ticker}")
-            continue
-        load_all_ohlc_to_db(ticker, list_ohlc, time_update)
-        print(f"Fetched until {timestamp_to_YYYYMMDDTHH(list_ohlc[-1].get('t') / 1000) if list_ohlc else 'N/A'}")
-        time.sleep(12)
-        
-        while next_url:
-            list_ohlc, next_url = ohlc_get_next_url(next_url)
-            load_all_ohlc_to_db(ticker, list_ohlc, time_update)
-            print(f"Fetched until {timestamp_to_YYYYMMDDTHH(list_ohlc[-1].get('t') / 1000) if list_ohlc else 'N/A'}")
-            time.sleep(12)
+            load_ohlc_to_db(ticker, from_timestamp, to_timestamp, time_update)
     print("Completed crawling assigned companies' OHLC data.")
     return
             
@@ -144,3 +138,44 @@ def get_latest_ohlc(ticker=None):
         sort=[("t", DESCENDING)]
     )
     return result
+
+def get_earliest_ohlc(ticker=None):
+    """Get the most recent OHLC record based on timestamp t"""
+    filter_query = {}
+    if ticker:
+        filter_query["ticker"] = ticker
+        
+    result = mongodb._OHLC.find_one(
+        filter=filter_query,
+        sort=[("t", ASCENDING)]
+    )
+    return result
+
+def load_ohlc_to_db(ticker, from_timestamp, to_timestamp, time_update):
+    list_ohlc, next_url = get_ohlc(ticker, from_timestamp, to_timestamp)
+    if not list_ohlc:
+        print(f"No new OHLC data for ticker {ticker}")
+        return
+    load_all_ohlc_to_db(ticker, list_ohlc, time_update)
+    print(f"Fetched until {timestamp_to_YYYYMMDDTHH(list_ohlc[-1].get('t') / 1000) if list_ohlc else 'N/A'}")
+    time.sleep(12)
+    
+    while next_url:
+        list_ohlc, next_url = ohlc_get_next_url(next_url)
+        if not list_ohlc:
+            print(f"No new OHLC data for ticker {ticker}")
+            time.sleep(12)
+            break
+        load_all_ohlc_to_db(ticker, list_ohlc, time_update)
+        print(f"Fetched until {timestamp_to_YYYYMMDDTHH(list_ohlc[-1].get('t') / 1000) if list_ohlc else 'N/A'}")
+        time.sleep(12)
+# def check_ohlc_exists(ticker, from_timestamp, to_timestamp, time_window_in_seconds=3600):
+#     filter_query = {
+#         "ticker": ticker
+#     }
+#     list_ohlc = mongodb._OHLC.find_one(filter=filter_query)
+#     if not list_ohlc:
+#         print(f"No OHLC data found for ticker {ticker}")
+#     while from_timestamp <= to_timestamp:
+            
+#     return result is not None
