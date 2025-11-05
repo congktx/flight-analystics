@@ -1,3 +1,5 @@
+import time
+
 import json
 import os
 import requests
@@ -10,7 +12,7 @@ from utils.utils import text_to_hash
 
 from utils.time_utils import timestamp_to_YYYYMMDDTHHMM
 
-import time
+from utils.json_file import load_json_file, save_json_file
 
 mongodb = MongoDB()
 
@@ -41,7 +43,8 @@ def get_news_sentiment(tickers, from_timestamp, to_timestamp):
     try:
         response = requests.get(url, params=params, headers=headers).json()
         if not response.get('feed'):
-            print(response)
+            if response.get('Information') and "rate limit" in response.get('Information'):
+                return "rate limit"
             return []
         
         list_news = []
@@ -57,6 +60,7 @@ def get_news_sentiment(tickers, from_timestamp, to_timestamp):
         return []
 
 def load_all_news_sentiment_to_db(list_news, time_update):
+    list_document = []
     for news in list_news:
         document = {
             "_id": text_to_hash(news.get('title') + '_' + news.get('url')) + '_' + str(time_update),
@@ -75,122 +79,32 @@ def load_all_news_sentiment_to_db(list_news, time_update):
             "relevance_score_definition": news.get('relevance_score_definition'),
             "time_update": time_update
         }
-        
-        mongodb.upsert_space_news(document)
+        list_document.append(document)
+    
+    mongodb.upsert_space_many_news(list_document)
+    time.sleep(0.1)
         
 def crawl_news_sentiment(from_timestamp, to_timestamp, time_update):
-    # timestamp = mongodb.find_last_timestamp(mongodb._company_infos)
+    timestamp = mongodb.find_last_timestamp(mongodb._company_infos)
     filter = {
         "time_update": time_update
     }
     list_company_infos = list(mongodb.find_documents(mongodb._company_infos, filter))
     tickers = list(map(lambda x: x.get('ticker'), list_company_infos))
-
+    # dict = load_json_file('./tmp/division_of_labor.json')
+    # tickers = dict.get('Thinh')
+    # last_request = 'LPAA'
+    # is_start_crawl = False
     for ticker in tickers:
+        # if ticker == last_request:
+        #     is_start_crawl = True
+        # if not is_start_crawl:
+        #     continue
+        
         list_news = get_news_sentiment(ticker, from_timestamp, to_timestamp)
         print(ticker, len(list_news))
-        load_all_news_sentiment_to_db(list_news, time_update)    
-        
-        time.sleep(12)
-        
-def crawl_assigned_news_sentiment(from_timestamp, to_timestamp, time_update):
-    # timestamp = mongodb.find_last_timestamp(mongodb._company_infos)
-    filter = {
-        "time_update": time_update
-    }
-    list_company_infos = list(mongodb.find_documents(mongodb._company_infos, filter))
-    tickers = list(map(lambda x: x.get('ticker'), list_company_infos))
-
-    for ticker in tickers:
-        list_news = get_news_sentiment(ticker, from_timestamp, to_timestamp)
-        print(ticker, len(list_news))
-        load_all_news_sentiment_to_db(list_news, time_update)    
-        
-        time.sleep(12)
-        
-def crawl_assigned_companies_ohlc(from_timestamp, to_timestamp, time_update):
-    # load division_of_labor.json from project root
-    root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    dov_path = os.path.join(root, "division_of_labor.json")
-    
-    try:
-        with open(dov_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            tickers = data.get(AssignedCompaniesConfig.ASSIGNED_COMPANIES, [])
-            last_index = data.get("ticker_index_finished", {}).get("Long", {}).get("ohlc", -1)
-            print("tickers counted:", len(tickers))
-    except Exception as e:
-        print(f"Error loading division_of_labor.json: {e}")
-        return
-        tickers = []
-    
-    for index in range(last_index + 1, len(tickers)):
-        ticker = tickers[index]
-        earliest_ohlc = get_earliest_ohlc(ticker)
-        if earliest_ohlc:
-            easrliest_timestamp = earliest_ohlc.get('t') / 1000 + 3600  # plus one hour
-            print(f"Start crawling OHLC for ticker {ticker} from {timestamp_to_YYYYMMDDTHH(from_timestamp)}")
-            load_ohlc_to_db(ticker, from_timestamp, easrliest_timestamp, time_update)
-        latest_ohlc = get_latest_ohlc(ticker)
-        if latest_ohlc:
-            latest_timestamp = latest_ohlc.get('t') / 1000 + 3600  # plus one hour
-            print(f"Continue crawling OHLC for ticker {ticker} from {timestamp_to_YYYYMMDDTHH(latest_timestamp)}")
-            load_ohlc_to_db(ticker, latest_timestamp, to_timestamp, time_update)
-        else:
-            print(f"Start crawling OHLC for ticker{ticker} from {timestamp_to_YYYYMMDDTHH(from_timestamp)}")
-            load_ohlc_to_db(ticker, from_timestamp, to_timestamp, time_update)
-        print(f"Completed crawling OHLC data for ticker {ticker}.")
-        try:
-            with open(dov_path, "r+", encoding="utf-8") as f:
-                data = json.load(f)
-                data["ticker_index_finished"]["Long"] = index - 1  # Save last index
-                f.seek(0)
-                json.dump(data, f, indent=4)
-                f.truncate()
-        except Exception as e:
-            print(f"Error updating progress in division_of_labor.json: {e}")
-    print("Completed crawling assigned companies' OHLC data.")
-    return
-            
-def get_latest_ohlc(ticker=None):
-    """Get the most recent OHLC record based on timestamp t"""
-    filter_query = {}
-    if ticker:
-        filter_query["ticker"] = ticker
-        
-    result = mongodb._OHLC.find_one(
-        filter=filter_query,
-        sort=[("t", DESCENDING)]
-    )
-    return result
-
-def get_earliest_ohlc(ticker=None):
-    """Get the most recent OHLC record based on timestamp t"""
-    filter_query = {}
-    if ticker:
-        filter_query["ticker"] = ticker
-        
-    result = mongodb._OHLC.find_one(
-        filter=filter_query,
-        sort=[("t", ASCENDING)]
-    )
-    return result
-
-def load_ohlc_to_db(ticker, from_timestamp, to_timestamp, time_update):
-    list_ohlc, next_url = get_ohlc(ticker, from_timestamp, to_timestamp)
-    if not list_ohlc:
-        print(f"No new OHLC data for ticker {ticker}")
-        return
-    load_all_ohlc_to_db(ticker, list_ohlc, time_update)
-    print(f"Fetched until {timestamp_to_YYYYMMDDTHH(list_ohlc[-1].get('t') / 1000) if list_ohlc else 'N/A'}")
-    time.sleep(12)
-    
-    while next_url:
-        list_ohlc, next_url = ohlc_get_next_url(next_url)
-        if not list_ohlc:
-            print(f"No new OHLC data for ticker {ticker}")
-            time.sleep(12)
+        if list_news == "rate limit": 
+            print(f"rate limit at {ticker}")
             break
-        load_all_ohlc_to_db(ticker, list_ohlc, time_update)
-        print(f"Fetched until {timestamp_to_YYYYMMDDTHH(list_ohlc[-1].get('t') / 1000) if list_ohlc else 'N/A'}")
-        time.sleep(12)
+        load_all_news_sentiment_to_db(list_news, time_update)
+        time.sleep(5)

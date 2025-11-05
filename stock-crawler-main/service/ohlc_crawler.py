@@ -52,7 +52,7 @@ def ohlc_get_next_url(url):
         next_url = response.get('next_url')
         
         if not response.get('results'):
-            return response.get('errors'), None
+            return response.get('errors'), next_url
 
         return response['results'], next_url
     except Exception as e:
@@ -60,6 +60,7 @@ def ohlc_get_next_url(url):
         return [], None
 
 def load_all_ohlc_to_db(ticker, list_ohlc, time_update):
+    list_documents = []
     for ohlc in list_ohlc:
         document = {
             "_id": ticker + '_' + str(ohlc.get('t')),
@@ -72,9 +73,11 @@ def load_all_ohlc_to_db(ticker, list_ohlc, time_update):
             'v': ohlc.get('v'),
             "time_update": time_update
         }
+
+        list_documents.append(document)
     
-        mongodb.upsert_space_ohlc(document)
-        time.sleep(0.1)
+    mongodb.upsert_space_many_ohlc(list_documents)
+    time.sleep(0.1)
         
 def crawl_all_ohlc(from_timestamp, to_timestamp, time_update):
     timestamp = mongodb.find_last_timestamp(mongodb._company_infos)
@@ -84,8 +87,17 @@ def crawl_all_ohlc(from_timestamp, to_timestamp, time_update):
     
     list_company_infos = list(mongodb.find_documents(mongodb._company_infos, filter))
     tickers = list(map(lambda x: x.get('ticker'), list_company_infos))
+
+    last_ticker = mongodb.find_last_timestamp(mongodb._OHLC)
+    is_start_crawl = False
     
     for ticker in tickers:
+        if last_ticker == 'None' or last_ticker == ticker: is_start_crawl = True
+        
+        if not is_start_crawl: continue
+
+        mongodb.upsert_last_completed_timestamp(mongodb._OHLC, ticker)
+        
         list_ohlc, next_url = get_ohlc(ticker, from_timestamp, to_timestamp)
         load_all_ohlc_to_db(ticker, list_ohlc, time_update)
         
@@ -93,7 +105,8 @@ def crawl_all_ohlc(from_timestamp, to_timestamp, time_update):
         
         while next_url:
             list_ohlc, next_url = ohlc_get_next_url(next_url)
-            load_all_ohlc_to_db(ticker, list_ohlc, time_update)
+            if isinstance(list_ohlc, list):
+                load_all_ohlc_to_db(ticker, list_ohlc, time_update)
             time.sleep(12)
             
 def crawl_assigned_companies_ohlc(from_timestamp, to_timestamp, time_update):
