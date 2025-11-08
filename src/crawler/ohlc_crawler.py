@@ -8,6 +8,7 @@ def get_ohlc_data(from_date: str, to_date: str):
     list_tickers, id = get_company_labels(task_owner="Loi")
     id = 1
     for idx, ticker in enumerate(list_tickers):
+        print(f"{idx+1} "+"="*15+f"{ticker}"+"="*15)
         id = get_ohlc_data_by_ticker(ticker=ticker,
                                      from_date=from_date,
                                      to_date=to_date,
@@ -17,13 +18,13 @@ def get_ohlc_data(from_date: str, to_date: str):
 
 def get_ohlc_data_by_ticker(ticker: str, from_date: str, to_date: str, id: int)-> int:
     time.sleep(12)
-    url = f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/hour/{from_date}/{to_date}"
+    url = f"https://api.massive.com/v2/aggs/ticker/{ticker}/range/1/hour/{from_date}/{to_date}"
     headers = {
         "Content-Type": "application/json"
     }
 
     params = {
-        "adjusted": True,
+        "adjusted": "true",
         "sort": "asc",
         "limit": 50000,
         "apiKey": MassiveConfig.API_KEY
@@ -31,6 +32,7 @@ def get_ohlc_data_by_ticker(ticker: str, from_date: str, to_date: str, id: int)-
 
     try:
         res = requests.get(url=url, headers=headers, params=params).json()
+        res = dict(res)
         results = res["results"]
         results = adjust_data(data=results,
                               ticker=ticker)
@@ -38,10 +40,9 @@ def get_ohlc_data_by_ticker(ticker: str, from_date: str, to_date: str, id: int)-
         save_info(path=GlobalConfig.OHLC_DATA_PATH,
                   data=results,
                   id=id)
-        if next_url:
-            cursor = next_url.split("cursor=")[-1]
+        if next_url != None:
             id = get_ohlc_data_next_url(ticker=ticker,
-                                        cursor=cursor, 
+                                        url=next_url, 
                                         from_date=from_date,
                                         to_date=to_date, 
                                         id=id+1)
@@ -50,37 +51,32 @@ def get_ohlc_data_by_ticker(ticker: str, from_date: str, to_date: str, id: int)-
 
     return id+1
 
-def get_ohlc_data_next_url(ticker: str, from_date: str, to_date: str, cursor: str, id: int)-> int:
-    url = f"https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/hour/{from_date}/{to_date}"
+def get_ohlc_data_next_url(ticker: str, from_date: str, to_date: str, url: str, id: int)-> int:
     headers = {
         "Content-Type": "application/json"
     }
 
     params = {
-        "cursor": cursor,
-        "adjusted": True,
+        "adjusted": "true",
         "sort": "asc",
         "limit": 50000,
         "apiKey": MassiveConfig.API_KEY
     }
-
     try:
-        while cursor != None:
+        while url != None:
             time.sleep(12)
-            params["cursor"] = cursor
             res = requests.get(params=params, headers=headers, url=url).json()
-            results = res["results"]
+            results = res.get("results")
             results = adjust_data(data=results,
                               ticker=ticker)
-            next_url = res.get("next_url")
+            url = res.get("next_url")
             save_info(path=GlobalConfig.OHLC_DATA_PATH,
                       data=results,
                       id=id)
-            if next_url:
+            if url != None:
                 id+=1
-                cursor = next_url.split("cursor=")[-1]
             else:
-                cursor=None
+                url=None
     except Exception as e:
         print(f"Error while fetching data: {e} -> {id}")
     
