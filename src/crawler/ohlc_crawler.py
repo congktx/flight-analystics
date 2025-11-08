@@ -43,15 +43,13 @@ def get_ohlc_data_by_ticker(ticker: str, from_date: str, to_date: str, id: int)-
         if next_url != None:
             id = get_ohlc_data_next_url(ticker=ticker,
                                         url=next_url, 
-                                        from_date=from_date,
-                                        to_date=to_date, 
                                         id=id+1)
     except Exception as e:
         print(f"Error while fetching data: {e} -> {id}")
 
     return id+1
 
-def get_ohlc_data_next_url(ticker: str, from_date: str, to_date: str, url: str, id: int)-> int:
+def get_ohlc_data_next_url(ticker: str, url: str, id: int)-> int:
     headers = {
         "Content-Type": "application/json"
     }
