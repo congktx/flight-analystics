@@ -8,6 +8,9 @@ from utils.time_utils import timestamp_to_date
 
 from config import PolygonConfig
 
+from utils.json_file import load_json_file, save_json_file
+
+
 mongodb = MongoDB()
 
 def get_ohlc(ticker, from_timestamp, to_timestamp):
@@ -43,9 +46,13 @@ def ohlc_get_next_url(url):
     headers = {
         "Content-Type": "application/json"
     }
+    
+    params = {
+        "apiKey": PolygonConfig.API_KEY
+    }
 
     try:
-        response = requests.get(url, headers=headers).json()
+        response = requests.get(url=url, headers=headers, params=params).json()
         
         next_url = response.get('next_url')
         
@@ -78,13 +85,15 @@ def load_all_ohlc_to_db(ticker, list_ohlc, time_update):
     time.sleep(0.1)
         
 def crawl_all_ohlc(from_timestamp, to_timestamp, time_update):
-    timestamp = mongodb.find_last_timestamp(mongodb._company_infos)
-    filter = {
-        "time_update": timestamp
-    }
+    # timestamp = mongodb.find_last_timestamp(mongodb._company_infos)
+    # filter = {
+    #     "time_update": timestamp
+    # }
     
-    list_company_infos = list(mongodb.find_documets(mongodb._company_infos, filter))
-    tickers = list(map(lambda x: x.get('ticker'), list_company_infos))
+    # list_company_infos = list(mongodb.find_documets(mongodb._company_infos, filter))
+    # tickers = list(map(lambda x: x.get('ticker'), list_company_infos))
+    dict = load_json_file('./tmp/division_of_labor.json')
+    tickers = dict.get('Thinh')
 
     last_ticker = mongodb.find_last_timestamp(mongodb._OHLC)
     is_start_crawl = False
@@ -93,11 +102,20 @@ def crawl_all_ohlc(from_timestamp, to_timestamp, time_update):
         if last_ticker == 'None' or last_ticker == ticker: is_start_crawl = True
         
         if not is_start_crawl: continue
+        
+        # number_document = mongodb._OHLC.count_documents({
+        #     'ticker': ticker
+        # })
+        # time.sleep(0.1)
+        
+        # if number_document: continue
+        
+        print(ticker)
 
         mongodb.upsert_last_completed_timestamp(mongodb._OHLC, ticker)
-        
         list_ohlc, next_url = get_ohlc(ticker, from_timestamp, to_timestamp)
-        load_all_ohlc_to_db(ticker, list_ohlc, time_update)
+        if isinstance(list_ohlc, list):
+            load_all_ohlc_to_db(ticker, list_ohlc, time_update)
         
         time.sleep(12)
         
@@ -106,4 +124,6 @@ def crawl_all_ohlc(from_timestamp, to_timestamp, time_update):
             if isinstance(list_ohlc, list):
                 load_all_ohlc_to_db(ticker, list_ohlc, time_update)
             time.sleep(12)
-    
+        
+        if not isinstance(list_ohlc, list) or len(list_ohlc) == 0:
+            break
