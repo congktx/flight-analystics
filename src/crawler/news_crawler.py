@@ -6,6 +6,7 @@ from utils.utils import (parse_date_to_timestamp,
 from pprint import pprint
 import requests
 from utils.config import *
+import time
 
 def get_news_sentiment_by_stickers(tickers: str, from_date: str, to_date: str, id):
 
@@ -30,7 +31,7 @@ def get_news_sentiment_by_stickers(tickers: str, from_date: str, to_date: str, i
         response = requests.get(url, params=params, headers=headers).json()
         if response.get('Information') and "rate limit" in response.get('Information'):
             print("===================== Daily rate limit reached please change your IP =================")
-            return None
+            return 1
         if response.get('feed'):
             list_news = []
             for new in response.get('feed'):
@@ -43,16 +44,17 @@ def get_news_sentiment_by_stickers(tickers: str, from_date: str, to_date: str, i
                       data=list_news,
                       id=id)
             save_finished_index(index=id)
-        
+        return None
     except Exception as e:
         print(f"Error fetching data: {e}")
-        return []
+        return 1
     
 def get_news_sentiment(from_date: str, to_date: str):
     tickers, id = get_company_labels(task_owner="Loi")
     for idx, ticker in enumerate(tickers):
+        print(f"{idx+id} "+"="*15+f"{ticker}"+"="*15)
         if get_news_sentiment_by_stickers(tickers=ticker, 
                                        from_date=from_date, 
                                        to_date=to_date,
-                                       id=idx+id+1) == None:
+                                       id=idx+id+1) == 1:
             return None

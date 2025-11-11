@@ -7,6 +7,7 @@ _init_env()
 
 # get_company_infos(date="2024-01-01",
 #                   exchange="XNYS")
-get_ohlc_data(from_date="2024-01-01",
-              to_date="2025-09-30")
-            
+# get_ohlc_data(from_date="2024-01-01",
+#               to_date="2025-09-30")
+get_news_sentiment(from_date="2024-01-01",
+                   to_date="2025-09-30")
