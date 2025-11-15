@@ -1,0 +1,16 @@
+market_id,market_type,market_region,market_local_close,market_local_open
+1,Equity,United States,16:15,09:30
+2,Equity,Canada,16:00,09:30
+3,Equity,United Kingdom,16:30,08:00
+4,Equity,Germany,20:00,08:00
+5,Equity,France,17:30,09:00
+6,Equity,Spain,17:30,09:00
+7,Equity,Portugal,16:30,08:00
+8,Equity,Japan,15:00,09:00
+9,Equity,India,15:30,09:15
+10,Equity,Mainland China,15:00,09:30
+11,Equity,Hong Kong,16:00,09:30
+12,Equity,Brazil,17:30,10:00
+13,Equity,Mexico,15:00,08:30
+14,Equity,South Africa,17:00,09:00
+15,Forex,Global,23:59,00:00

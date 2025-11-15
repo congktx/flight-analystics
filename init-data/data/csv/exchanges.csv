@@ -1,0 +1,27 @@
+exchange_id,exchange_mic,exchange_name,exchange_fk
+1,XNAS,NASDAQ,1
+2,XNYS,NYSE,1
+3,XASE,AMEX,1
+4,BATS,BATS,1
+5,XTSE,Toronto,2
+6,XTSX,Toronto Ventures,2
+7,XLON,London,3
+8,XETR,XETRA,4
+9,XBER,Berlin,4
+10,XFRA,Frankfurt,4
+11,XMUN,Munich,4
+12,XSTU,Stuttgart,4
+13,XPAR,Paris,5
+14,XBAR,Barcelona,6
+15,XMAD,Madrid,6
+16,XLIS,Lisbon,7
+17,XTKS,Tokyo,8
+18,XNSE,NSE,9
+19,XBOM,BSE,9
+20,XSHG,Shanghai,10
+21,XSHE,Shenzhen,10
+22,XHKG,Hong Kong,11
+23,BVMF,Sao Paolo,12
+24,XMEX,Mexico,13
+25,XJSE,Johannesburg,14
+26,FOREX,Global,15
