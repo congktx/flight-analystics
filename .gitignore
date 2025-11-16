@@ -4,5 +4,6 @@ data/
 !data/market/.gitkeep
 !data/news/.gitkeep
 !data/ohlc/.gitkeep
-
+!data/ohlc_remain/.gitkeep
+!data/news_remain/.gitkeep
 __pycache__/
