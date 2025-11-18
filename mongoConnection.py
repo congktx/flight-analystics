@@ -1,7 +1,11 @@
 import config
 from pymongo import MongoClient
+from motor.motor_asyncio import AsyncIOMotorClient
 
-client = MongoClient(config.MONGODB_URL)
+# client = MongoClient(config.MONGODB_URL)
+# db = client["stock_big_data"]
+
+client = AsyncIOMotorClient(config.MONGODB_URL)
 db = client["stock_big_data"]
 
 company_infos_coll = db['company_infos']

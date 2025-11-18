@@ -1,1 +1,1 @@
-# flight-analystics
+# stock-analystics
