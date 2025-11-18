@@ -1,3 +1,5 @@
+import time
+
 import requests
 
 from config import AlphavantageConfig
@@ -8,7 +10,7 @@ from utils.utils import text_to_hash
 
 from utils.time_utils import timestamp_to_YYYYMMDDTHHMM
 
-import time
+from utils.json_file import load_json_file, save_json_file
 
 mongodb = MongoDB()
 
@@ -39,7 +41,8 @@ def get_news_sentiment(tickers, from_timestamp, to_timestamp):
     try:
         response = requests.get(url, params=params, headers=headers).json()
         if not response.get('feed'):
-            print(response)
+            if response.get('Information') and "rate limit" in response.get('Information'):
+                return "rate limit"
             return []
         
         list_news = []
@@ -55,6 +58,7 @@ def get_news_sentiment(tickers, from_timestamp, to_timestamp):
         return []
 
 def load_all_news_sentiment_to_db(list_news, time_update):
+    list_document = []
     for news in list_news:
         document = {
             "_id": text_to_hash(news.get('title') + '_' + news.get('url')) + '_' + str(time_update),
@@ -73,8 +77,10 @@ def load_all_news_sentiment_to_db(list_news, time_update):
             "relevance_score_definition": news.get('relevance_score_definition'),
             "time_update": time_update
         }
-        
-        mongodb.upsert_space_news(document)
+        list_document.append(document)
+    
+    mongodb.upsert_space_many_news(list_document)
+    time.sleep(0.1)
         
 def crawl_news_sentiment(from_timestamp, to_timestamp, time_update):
     timestamp = mongodb.find_last_timestamp(mongodb._company_infos)
@@ -83,8 +89,16 @@ def crawl_news_sentiment(from_timestamp, to_timestamp, time_update):
     }
     list_company_infos = list(mongodb.find_documets(mongodb._company_infos, filter))
     tickers = list(map(lambda x: x.get('ticker'), list_company_infos))
-
+    # dict = load_json_file('./tmp/division_of_labor.json')
+    # tickers = dict.get('Thinh')
+    # last_request = 'LPAA'
+    # is_start_crawl = False
     for ticker in tickers:
+        # if ticker == last_request:
+        #     is_start_crawl = True
+        # if not is_start_crawl:
+        #     continue
+        
         list_news = get_news_sentiment(ticker, from_timestamp, to_timestamp)
         print(ticker, len(list_news))
         if list_news == "rate limit": 
