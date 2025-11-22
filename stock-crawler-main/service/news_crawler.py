@@ -83,21 +83,21 @@ def load_all_news_sentiment_to_db(list_news, time_update):
     time.sleep(0.1)
         
 def crawl_news_sentiment(from_timestamp, to_timestamp, time_update):
-    timestamp = mongodb.find_last_timestamp(mongodb._company_infos)
-    filter = {
-        "time_update": timestamp
-    }
-    list_company_infos = list(mongodb.find_documets(mongodb._company_infos, filter))
-    tickers = list(map(lambda x: x.get('ticker'), list_company_infos))
-    # dict = load_json_file('./tmp/division_of_labor.json')
-    # tickers = dict.get('Thinh')
-    # last_request = 'LPAA'
-    # is_start_crawl = False
+    # timestamp = mongodb.find_last_timestamp(mongodb._company_infos)
+    # filter = {
+    #     "time_update": timestamp
+    # }
+    # list_company_infos = list(mongodb.find_documets(mongodb._company_infos, filter))
+    # tickers = list(map(lambda x: x.get('ticker'), list_company_infos))
+    dict = load_json_file('./tmp/division_of_labor.json')
+    tickers = dict.get('Thinh')
+    last_request = 'AACBR'
+    is_start_crawl = False
     for ticker in tickers:
-        # if ticker == last_request:
-        #     is_start_crawl = True
-        # if not is_start_crawl:
-        #     continue
+        if ticker == last_request:
+            is_start_crawl = True
+        if not is_start_crawl:
+            continue
         
         list_news = get_news_sentiment(ticker, from_timestamp, to_timestamp)
         print(ticker, len(list_news))
