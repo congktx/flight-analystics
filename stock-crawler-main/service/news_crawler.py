@@ -106,3 +106,42 @@ def crawl_news_sentiment(from_timestamp, to_timestamp, time_update):
             break
         load_all_news_sentiment_to_db(list_news, time_update)
         time.sleep(5)
+        
+def crawl_assigned_news_sentiment(from_timestamp, to_timestamp, time_update):
+    # load division_of_labor.json from project root
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    dov_path = os.path.join(root, "division_of_labor.json")
+    
+    try:
+        with open(dov_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            tickers = data.get(AssignedCompaniesConfig.ASSIGNED_COMPANIES, [])
+            last_index = data.get("ticker_index_finished", {}).get("Long", {}).get("sentiments", -1)
+            print("tickers counted:", len(tickers))
+    except Exception as e:
+        print(f"Error loading division_of_labor.json: {e}")
+        return
+        last_index = -1
+        tickers = []
+    
+    for index in range(last_index + 1, len(tickers)):
+        ticker = tickers[index]
+        list_news = get_news_sentiment(ticker, from_timestamp, to_timestamp)
+        print(ticker, len(list_news))
+        if list_news == "rate limit": 
+            print(f"rate limit at {ticker}")
+            # break
+            return "rate limit"
+        load_all_news_sentiment_to_db(list_news, time_update)
+        
+        try:
+            with open(dov_path, "r+", encoding="utf-8") as f:
+                data = json.load(f)
+                data["ticker_index_finished"]["Long"]["sentiments"] = index  # Save last index
+                f.seek(0)
+                json.dump(data, f, indent=4)
+                f.truncate()
+        except Exception as e:
+            print(f"Error updating progress in division_of_labor.json: {e}")
+            
+        time.sleep(1)
