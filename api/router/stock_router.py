@@ -19,6 +19,7 @@ async def get_company_infos(ticker: Union[str | None] = None, exchange: Union[st
         
         if page == None: 
             page = 1
+        
         return mongodb.get_company_infos(ticker, exchange, from_timestamp, to_timestamp, limit, page)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

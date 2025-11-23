@@ -35,7 +35,7 @@ class MongoDB:
     def get_collection(self, collection_name):
         return self.db[collection_name]
 
-    def get_company_infos(self, ticker: str | None, exchange: str | None, from_timestamp: int | None, to_timestamp: int| None, n_limit: int, n_page: int):
+    def get_company_infos(self, ticker: str | None, exchange: str | None, from_timestamp: int | None, to_timestamp: int | None, n_limit: int, n_page: int):
         query = {}
         if ticker:
             query.update({'ticker': ticker})
@@ -55,8 +55,19 @@ class MongoDB:
             query['time_update'].update({
                 '$lte': to_timestamp
             })
-            
-        return list(self._company_infos.find(query).skip((n_page - 1) * n_limit).limit(n_limit).sort({"_id": 1}))
+
+        num_document = self._company_infos.count_documents(query)
+
+        page_count = num_document // n_limit
+
+        if num_document % n_limit != 0:
+            page_count += 1
+
+        return {
+            "page_id": n_page,
+            "page_count": page_count,
+            "documents": list(self._company_infos.find(query).skip((n_page - 1) * n_limit).limit(n_limit).sort({"_id": 1}))
+        }
 
     def get_market_status(self):
         return list(self._market_status.find())
@@ -78,7 +89,19 @@ class MongoDB:
             query['t'].update({
                 '$lte': to_timestamp
             })
-        return list(self._OHLC.find(query).skip((n_page - 1) * n_limit).limit(n_limit).sort({"_id": 1}))
+
+        num_document = self._OHLC.count_documents(query)
+
+        page_count = num_document // n_limit
+
+        if num_document % n_limit != 0:
+            page_count += 1
+
+        return {
+            "page_id": n_page,
+            "page_count": page_count,
+            "documents": list(self._OHLC.find(query).skip((n_page - 1) * n_limit).limit(n_limit).sort({"_id": 1}))
+        }
 
     def get_news_sentiment(self, ticker: str | None, from_date: str | None, to_date: str | None, n_limit: int, n_page: int):
 
@@ -104,4 +127,15 @@ class MongoDB:
                 '$lte': from_date
             })
 
-        return list(self._news_sentiment.find(query).skip((n_page - 1) * n_limit).limit(n_limit).sort({"_id": 1}))
+        num_document = self._news_sentiment.count_documents(query)
+
+        page_count = num_document // n_limit
+
+        if num_document % n_limit != 0:
+            page_count += 1
+
+        return {
+            "page_id": n_page,
+            "page_count": page_count,
+            "documents": list(self._news_sentiment.find(query).skip((n_page - 1) * n_limit).limit(n_limit).sort({"_id": 1}))
+        }
