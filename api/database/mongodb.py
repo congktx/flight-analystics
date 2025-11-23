@@ -35,7 +35,7 @@ class MongoDB:
     def get_collection(self, collection_name):
         return self.db[collection_name]
 
-    def get_company_infos(self, ticker: str | None, exchange: str | None, n_limit: int, n_page: int):
+    def get_company_infos(self, ticker: str | None, exchange: str | None, from_timestamp: int | None, to_timestamp: int| None, n_limit: int, n_page: int):
         query = {}
         if ticker:
             query.update({'ticker': ticker})
@@ -43,6 +43,19 @@ class MongoDB:
         if exchange:
             query.update({'primary_exchange': exchange})
 
+        if from_timestamp or to_timestamp:
+            query.update({'time_update': {}})
+
+        if from_timestamp:
+            query['time_update'].update({
+                '$gte': from_timestamp
+            })
+
+        if to_timestamp:
+            query['time_update'].update({
+                '$lte': to_timestamp
+            })
+            
         return list(self._company_infos.find(query).skip((n_page - 1) * n_limit).limit(n_limit).sort({"_id": 1}))
 
     def get_market_status(self):
