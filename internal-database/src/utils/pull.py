@@ -4,6 +4,7 @@ from typing import Tuple
 import requests, json
 from pprint import pprint
 import pandas as pd
+from tqdm import tqdm
 from utils.utils import (import_companies_table,
                          import_company_status_table)
 from exports.export_company_status_to_csv import (export_data_of_companies_table,
@@ -62,21 +63,21 @@ def pull_company_infos(year: int, month: int):
     results = []
     try:
         res:dict = requests.get(url=url, params=params).json()
-    
+
         results += res.get("documents")
 
         page_count = res.get("page_count")
 
-        while page_id <= page_count:
-            page_id += 1
+        for page_id in tqdm(range(2, page_count + 1), desc="Fetching pages", unit="page"):
             try:
-                params.update({"page": page_id})
-                res:dict = requests.get(url=url, params=params).json()
-            
-                results += res.get("documents")
-            except Exception as e:
-                print(f"Error while fetching data: {e} -> {page_id}")
+                params["page"] = page_id
+                res = requests.get(url=url, params=params).json()
 
+                docs = res.get("documents", [])
+                if docs:
+                    results += docs
+            except Exception as e:
+                print(f"Error while fetching data: {e} -> page {page_id}")
     except Exception as e:
         print(f"Error while fetching data: {e} -> {page_id}")
     
