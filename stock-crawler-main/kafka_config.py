@@ -6,9 +6,10 @@ load_dotenv()
 
 class KafkaConfig:
     # Kafka Broker Settings
-    # K8s: kafka:9092 or localhost:30092
+    # K8s NodePort: localhost:30092 (external access)
+    # K8s Internal: kafka:9092 (from within pods)
     # Docker: localhost:9092
-    BOOTSTRAP_SERVERS = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+    BOOTSTRAP_SERVERS = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:30092")
     CLIENT_ID = os.environ.get("KAFKA_CLIENT_ID", "stock-crawler")
     
     # Producer Settings
